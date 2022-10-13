@@ -1,0 +1,26 @@
+{
+    "name": "test-6m-3-3",
+    "merchant_filtering": {
+	"min_transcount": 100,
+	"output_filepath": "output/20181219_filtered_merchant_trans_df.csv",
+	"output_agg_filepath": "output/000_agg_df.csv",
+	"remove_online": 1,
+	"mcc_list": [5411, 5541, 5691, 5045, 5732, 5499, 5977, 5200, 5661, 5941,
+		     5712, 5814, 5812, 5942, 5641, 5945, 5992, 5999, 5722, 5621,
+		     5950, 7298, 5310, 5912, 7538, 5813, 5532, 7299, 5462, 7832,
+		     5533, 5631, 5962, 8299, 5947, 8043, 4900, 8931, 5211, 5944,
+		     8699, 5943, 8011, 5511, 5611, 5111, 8999, 5983, 5948, 5714,
+		     5192],
+	"min_merchants_mcc": 5,
+	"min_month_trans": 12
+    },
+    "network_construction": {
+	"input_filepath": "output/20181219_filtered_merchant_trans_df.csv",
+	"customer_min_trans": 3,
+	"min_customer_num": 3,
+	"weighted": "num_customer",
+	"yyyymm_periods": ["2014-07", "2014-08", "2014-09",
+			   "2014-10", "2014-11", "2014-12"]
+    }
+}
+

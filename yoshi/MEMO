@@ -1,0 +1,26 @@
+* How to load file
+
+df = pd.read_csv("output/000_agg_df.csv", index_col=[0,1], header=[0,1])
+null_df = df["MUSTERI_ID_MASK"]["count"].unstack().isnull()
+
+# Newly opened merchants
+yyyymm_list = null_df.columns.tolist()
+filtered_df = null_df.copy()
+data_list = []
+stat_list = []
+for i, yyyymm in enumerate(yyyymm_list):
+    filtered_df = filtered_df[filtered_df[yyyymm] == True]
+    merchantids = filtered_df[filtered_df.sum(axis=1) == (i + 1)].index.tolist()
+    data_list.append([yyyymm, merchantids])
+    stat_list.append([yyyymm, len(merchantids)])		     
+
+# Permanently closed merchants
+rev_data_list = []
+rev_stat_list = []
+filtered_df = null_df.copy()
+for i, yyyymm in enumerate(reversed(yyyymm_list)):
+    filtered_df = filtered_df[filtered_df[yyyymm] == True]
+    merchantids = filtered_df[filtered_df.sum(axis=1) == (i + 1)].index.tolist()
+    rev_data_list.append([yyyymm, merchantids])
+    rev_stat_list.append([yyyymm, len(merchantids)])		     
+
