@@ -9,6 +9,8 @@ import os
 
 import numpy as np
 import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
@@ -24,6 +26,10 @@ except ImportError:
     GBClassifier = GradientBoostingClassifier
 
 
+import warnings
+warnings.filterwarnings("ignore")
+
+
 logger = getLogger(__name__)
 
 
@@ -36,6 +42,7 @@ def load_data(label_filepath,
 
     label_df = pd.read_csv(label_filepath,
                            index_col=0)
+    print(label_df.shape, label_filepath)
     feature_df_list = []
     for feature_filepath in feature_filepath_list:
         f_df = pd.read_csv(feature_filepath,
@@ -47,7 +54,9 @@ def load_data(label_filepath,
     feature_df = pd.concat(feature_df_list, axis=1)
     label_merchantid_set = set(label_df.index.tolist())
     feature_merchantid_set = set(feature_df.index.tolist())
-    assert len(label_merchantid_set & feature_merchantid_set) > 0
+
+    instance_ind = list(label_merchantid_set & feature_merchantid_set)
+    assert len(instance_ind) > 0
 
     logger.debug("#label_merchantid_set={}".format(
         len(label_merchantid_set)))
@@ -56,9 +65,9 @@ def load_data(label_filepath,
     logger.debug('#intersection='.format(
         len(label_merchantid_set & feature_merchantid_set)))
 
-    filtered_feature_df = feature_df.ix[label_df.index]
-    X = filtered_feature_df.fillna(0).as_matrix()
-    y = label_df.as_matrix().ravel()
+    filtered_feature_df = feature_df.loc[instance_ind]
+    X = filtered_feature_df.fillna(0).values
+    y = label_df.loc[instance_ind].values.ravel()
     assert len(np.unique(y)) == 2
     assert X.shape[0] == len(y)
     return X, y, filtered_feature_df
@@ -69,15 +78,33 @@ def run_cross_validation(X, y,
     test_auc_dict = {}
     fimp_dict = {}
     for clf_name, clf in [('lr', GridSearchCV(
-            LogisticRegression(),
-            param_grid={"C": [0.001, 0.01, 0.1, 1.0, 10.0]},
-            scoring='roc_auc')),
-                          ('xgboost', GridSearchCV(
-                              XGBClassifier(),
-                              param_grid={'n_estimators': [10, 100],
-                                          'learning_rate': [0.01, 0.05],
-                                          'max_depth': [2, 5]},
-                              scoring='roc_auc'))]:
+                                LogisticRegression(),
+                                param_grid={"C": [0.001, 0.01, 0.1, 1.0, 10.0]},
+                                scoring='roc_auc'
+                            )),
+                            ('xgboost', GridSearchCV(
+                                XGBClassifier(),
+                                param_grid={'n_estimators': [10, 100],
+                                            'learning_rate': [0.01, 0.05],
+                                            'max_depth': [2, 5]},
+                                scoring='roc_auc'
+                            )),
+                            ('rf', GridSearchCV(
+                                RandomForestClassifier(),
+                                    param_grid={'n_estimators': [10, 100],
+                                                'max_depth': [3, 5, 10, 20]
+                                },
+                                scoring='roc_auc'
+                            )),
+                            ('svm', GridSearchCV(
+                                SVC(),
+                                param_grid={
+                                    'kernel': ['linear', 'rbf', 'sigmoid'],
+                                    'probability': [True]
+                                },
+                                scoring='roc_auc'
+                            ))
+                              ]:
         skf = StratifiedKFold(n_splits=5,
                               shuffle=True,
                               random_state=1)
@@ -131,6 +158,7 @@ def create_filename(label_filepath,
 def run_experiment(label_filepath,
                    feature_filepath_list,
                    output_dirpath):
+    print(output_dirpath)
     assert os.path.exists(output_dirpath)
     output_filepath = os.path.join(output_dirpath,
                                    create_filename(label_filepath,
