@@ -1,0 +1,97 @@
+---
+
+# transaction data header list for each bank
+tran_cols:
+  bank_x:
+    merchant_id: MERCHANT_NUMBER
+    customer_id: CUSTOMER_NUM
+    tran_date: TRN_DATE
+    tran_amount: TRL_AMOUNT
+    online_flag: ONLINE_FLAG
+    mcc: MERCHANT_CAT_CODE
+    merchant_name: MERCHANT_NAME
+    merchant_lat: LAT
+    merchant_lng: LON
+  bank_y:
+    merchant_id: UYEISYERI_ID_MASK
+    customer_id: MUSTERI_ID_MASK
+    tran_date: ISLEM_TARIHI
+    tran_amount: ISLEM_TUTARI
+    online_flag: ONLINE_ISLEM
+    mcc: ISYERI_TURU
+    merchant_lat: X
+    merchant_lng: Y
+
+customer_cols:
+  bank_x:
+    customer_id: CUSTOMER_NUM
+    age: CUSTOMER_AGE
+    gender: GENDER
+    marital_status: MARITAL_STATUS
+    education: EDUCATION_LEVEL
+    employment: WORKING_STYLE
+    income: INCOME_AMNT
+    home_lat: GC_HOME_Y
+    home_lng: GC_HOME_X
+    work_lat: GC_WORK_Y
+    work_lng: GC_WORK_X
+  bank_y:
+    customer_id: MUSTERI_ID_MASK
+    age: YAS
+    gender: CINSIYETI
+    marital_status: MEDENI_DRM_ACK
+    education: EGITIM_DRM_ACK
+    employment: IS_TURU_ACK
+    income: GELIR
+    home_lat: X_EV
+    home_lng: Y_EV
+    work_lat: X_IS
+    work_lng: Y_IS
+
+# merchant shapefiles
+shpfiles:
+  bank_x: istanbul-districts.geojson
+  bank_y: istanbul-districts.geojson
+
+# filtering configuration for transactions
+trans_filter:
+  bank_x:
+    min_trans_count: 25
+    remove_online: 1
+    mcc_list: [5411, 5541, 5691, 5045, 5732, 5499, 5977, 5200, 5661, 5941, 5712, 5814, 5812, 5942, 5641, 
+             5945, 5992, 5999, 5722, 5621, 5950, 7298, 5310, 5912, 7538, 5813, 5532, 7299, 5462, 7832, 
+             5533, 5631, 5962, 8299, 5947, 8043, 4900, 8931, 5211, 5944, 8699, 5943, 8011, 5511, 5611, 
+             5111, 8999, 5983, 5948, 5714, 5192]
+    min_merchants_mcc: 5
+    min_month_trans: 12
+  bank_y:
+    min_trans_count: 100
+    remove_online: 1
+    mcc_list: [5411, 5541, 5691, 5045, 5732, 5499, 5977, 5200, 5661, 5941, 5712, 5814, 5812, 5942, 5641, 
+             5945, 5992, 5999, 5722, 5621, 5950, 7298, 5310, 5912, 7538, 5813, 5532, 7299, 5462, 7832, 
+             5533, 5631, 5962, 8299, 5947, 8043, 4900, 8931, 5211, 5944, 8699, 5943, 8011, 5511, 5611, 
+             5111, 8999, 5983, 5948, 5714, 5192]
+    min_merchants_mcc: 5
+    min_month_trans: 12
+
+# break dates for both transactions
+break_date:
+  bank_x: '31-05-2013'
+  bank_y: '31-12-2014'
+  date_format: '%d-%m-%Y'
+  bank_x_date_format: '%Y-%m-%d'
+  bank_y_date_format: '%d-%m-%Y'
+
+# filtered transaction file names 
+trans_file_names:
+  bank_x: 'filtered_bank_x_trans.csv'
+  bank_y: 'filtered_bank_y_trans.csv'
+  # aggregated transaction files
+  agg:
+    bank_x: 'agg_bank_x_trans.csv'
+    bank_y: 'agg_bank_y_trans.csv'
+
+# network configuration
+network_conf:
+  customer_min_trans: 1
+  min_customer_num: 1
