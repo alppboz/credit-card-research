@@ -11,7 +11,7 @@ warnings.filterwarnings('ignore')
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-ch = logging.FileHandler('.spatialfiltlog')
+ch = logging.FileHandler('.spatialfiltlog', 'w')
 ch.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s ~~ %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 ch.setFormatter(formatter)
@@ -54,12 +54,12 @@ def geo_filter_merchants(trans_fname, bank, geom, config, overwrite=False):
         df.drop(['geometry', 'index_right'], axis=1).to_csv(output_file, header=header, index=False, mode='a')
         header=False
 
-    logger.debug('bank {bank} -> original # of transactions: {}'.format(bank, original_trans))
-    logger.debug('bank {bank} -> original # of merchants: {}'.format(bank, original_num_merchants))
+    logger.debug('bank {} -> original # of transactions: {}'.format(bank, original_trans))
+    logger.debug('bank {} -> original # of merchants: {}'.format(bank, original_num_merchants))
 
-    logger.debug('bank {bank} -> filtered # of transactions: {}'.format(bank, n_trans))
-    logger.debug('bank {bank} -> filtered # of merchants: {}'.format(bank, num_merchants))
-    print('done')
+    logger.debug('bank {} -> filtered # of transactions: {}'.format(bank, n_trans))
+    logger.debug('bank {} -> filtered # of merchants: {}'.format(bank, num_merchants))
+    print(f'spatial filtering bank_{bank}: done')
 
 
 if __name__ == '__main__':
@@ -71,4 +71,4 @@ if __name__ == '__main__':
         config = yaml.safe_load(f)
 
     for trans_fname, bank in trans_fnames:
-        geo_filter_merchants(trans_fname, bank, greater_ist_shp, config, overwrite=True)
+        geo_filter_merchants(trans_fname, bank, greater_ist_shp, config)

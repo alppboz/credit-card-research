@@ -56,7 +56,7 @@ shpfiles:
 # filtering configuration for transactions
 trans_filter:
   bank_x:
-    min_trans_count: 25
+    min_trans_count: 100
     remove_online: 1
     mcc_list: [5411, 5541, 5691, 5045, 5732, 5499, 5977, 5200, 5661, 5941, 5712, 5814, 5812, 5942, 5641, 
              5945, 5992, 5999, 5722, 5621, 5950, 7298, 5310, 5912, 7538, 5813, 5532, 7299, 5462, 7832, 

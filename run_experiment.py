@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import numpy as np
 from os.path import join, exists, basename
@@ -28,7 +29,7 @@ warnings.filterwarnings('ignore')
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-ch = logging.FileHandler('.explogfile')
+ch = logging.FileHandler('.explogfile', 'w')
 ch.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s ~~ %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 ch.setFormatter(formatter)
@@ -158,28 +159,51 @@ def run_experiment(label_filepath, feature_filepath_list, output_dirpath):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Running experiments with different feature combinations')
     
-    parser.add_argument('-F', '--features',
-                        nargs='*',
-                        type=str,
-                        required=True,
-                        help='feature file names')
+    parser.add_argument(
+        '-F', 
+        '--features',
+        nargs='*',
+        type=str,
+        required=True,
+        help='feature file names'
+    )
 
-    parser.add_argument('-L', '--label',
-                        type=str,
-                        required=True,
-                        help='Label file name')
+    parser.add_argument(
+        '-L', 
+        '--label',
+        type=str,
+        required=True,
+        help='Label file name'
+    )
 
-    parser.add_argument('-O', '--outputdir',
-                        type=str,
-                        default="eval",
-                        help='Output directory path')
+    parser.add_argument(
+        '-O', 
+        '--outputdir',
+        type=str,
+        default="eval",
+        help='Output directory path'
+    )
+
+    parser.add_argument(
+        '-E',
+        '--expname',
+        type=str,
+        required=False,
+        help='create a sub-directory for your results'
+    )
 
     args = parser.parse_args()
     feature_filepath_list = sorted(args.features)
 
     label_filepath = args.label
     output_dirpath = args.outputdir
+    expname = args.expname
 
-    print(feature_filepath_list)
+    if not exists(output_dirpath):
+        os.mkdir(output_dirpath)
+
+    if expname and not exists(join(output_dirpath, expname)):
+        os.mkdir(join(output_dirpath, expname))
+        output_dirpath = join(output_dirpath, expname)
 
     eval_df, fimp_info_df = run_experiment(label_filepath, feature_filepath_list, output_dirpath)

@@ -8,10 +8,12 @@ import igraph as ig
 from tqdm import tqdm
 import logging
 from tqdm import tqdm
+import os
 
+logfname = '.featurelogfile'
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-ch = logging.FileHandler('.featurelogfile')
+ch = logging.FileHandler(logfname, 'w')
 ch.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s ~~ %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 ch.setFormatter(formatter)
@@ -29,12 +31,16 @@ def calc_entropy(s):
     return (prob_s * np.log(1.0 / prob_s)).sum()
 
 
-def create_network(config, bank, weights='weight'):
+def create_network(config, bank, fname_prefix, weights='weight'):
     '''
     creates merchant networks for the given bank type
     '''
-    # output_fname = join('features', f'network_features_{weights}_{bank}.csv')
-    output_fname = join('features', f'filtered_network_features_{weights}_{bank}.csv')
+    # fname = f'network_features_{weights}_{bank}.csv'
+    fname = f'filtered_network_features_{weights}_{bank}.csv'
+    if fname_prefix:
+        fname = f'{fname_prefix}_{fname}'
+
+    output_fname = join('features', fname)
 
     if exists(output_fname):
         print(f'{output_fname} already exists')
@@ -47,7 +53,10 @@ def create_network(config, bank, weights='weight'):
     g = g.Read_Pickle(join('data', 'networks', f'filtered_bank_{bank}.pickle'))
 
     trans_cols = config['tran_cols'][f'bank_{bank}']
-    transaction_df = pd.read_csv(join('data', 'filtered_data', f'filtered_bank_{bank}_trans.csv'), 
+    trans_fname = f'filtered_bank_{bank}_trans.csv'
+    if fname_prefix:
+        trans_fname = f'{fname_prefix}_{trans_fname}'
+    transaction_df = pd.read_csv(join('data', 'filtered_data', trans_fname), 
                                       usecols=[trans_cols['merchant_id']], dtype={trans_cols['merchant_id']: int})
 
     # get filtered merchants
@@ -75,7 +84,7 @@ def create_network(config, bank, weights='weight'):
     models = [('pr', g.pagerank, {'weights': weights, 'directed': False, 'damping': 0.85}),
               ('degree', g.degree, {'mode': 'all'}),
               ('closeness', g.closeness, {'weights': weights, 'mode': 'all', 'cutoff': None, 'normalized': True}),
-              ('betweenness', g.betweenness, {'weights': weights, 'directed': False, 'cutoff': 3}),
+              ('betweenness', g.betweenness, {'weights': weights, 'directed': False, 'cutoff': None}),
               ('eigenvector', g.eigenvector_centrality, {'weights': weights, 'directed': False})
              ]
 
@@ -94,11 +103,15 @@ def create_network(config, bank, weights='weight'):
     net_df.to_csv(output_fname)
 
 
-def create_demographics(config, bank):
+def create_demographics(config, bank, fname_prefix):
     '''
     construct demographic features
     '''
-    output_fname = join('features', f'demographics_{bank}.csv')
+    fname = f'demographics_{bank}.csv'
+    if fname_prefix:
+        fname = f'{fname_prefix}_{fname}'
+
+    output_fname = join('features', fname)
 
     if exists(output_fname):
         print(f'{output_fname} already exists')
@@ -109,7 +122,10 @@ def create_demographics(config, bank):
     trans_cols = config['tran_cols'][f'bank_{bank}']
     customer_cols = config['customer_cols'][f'bank_{bank}']
 
-    transaction_df = pd.read_csv(join('data', 'filtered_data', f'filtered_bank_{bank}_trans.csv'), dtype={trans_cols['merchant_id']: int})
+    trans_fname = f'filtered_bank_{bank}_trans.csv'
+    if fname_prefix:
+        trans_fname = f'{fname_prefix}_{trans_fname}'
+    transaction_df = pd.read_csv(join('data', 'filtered_data', trans_fname), dtype={trans_cols['merchant_id']: int})
     customer_df = pd.read_csv(join('data', 'filtered_data', f'bank_{bank}_customers_districts.csv'))
 
     income = customer_cols['income']
@@ -131,6 +147,7 @@ def create_demographics(config, bank):
     merchantid_list = []
     feature_dict_list = []
     for merchantid, group_df in transaction_df.groupby([trans_cols['merchant_id']]):
+    #for merchantid, group_df in transaction_df[transaction_df[trans_cols['mcc']].isin([5411])].groupby([trans_cols['merchant_id']]):
         customerid_set = set(group_df[trans_cols['customer_id']].tolist())
         cur_df = customer_df[customer_df[customer_cols['customer_id']].isin(customerid_set)]
 
@@ -165,11 +182,15 @@ def create_demographics(config, bank):
     feature_df.to_csv(output_fname)
 
 
-def create_revenue_features(config, bank):
+def create_revenue_features(config, bank, fname_prefix):
     '''
     create features based on revenur for the given bank type 
     '''
-    output_fname = join('features', f'revenue_{bank}.csv')
+    fname = f'revenue_{bank}.csv'
+    if fname_prefix:
+        fname = f'{fname_prefix}_{fname}'
+
+    output_fname = join('features', fname)
 
     if exists(output_fname):
         print(f'{output_fname} already exists')
@@ -179,7 +200,10 @@ def create_revenue_features(config, bank):
 
     trans_cols = config['tran_cols'][f'bank_{bank}']
 
-    transaction_df = pd.read_csv(join('data', 'filtered_data', f'filtered_bank_{bank}_trans.csv'), dtype={trans_cols['merchant_id']: int})
+    trans_fname = f'filtered_bank_{bank}_trans.csv'
+    if fname_prefix:
+        trans_fname = f'{fname_prefix}_{trans_fname}'
+    transaction_df = pd.read_csv(join('data', 'filtered_data', trans_fname), dtype={trans_cols['merchant_id']: int})
 
     date_format = config['break_date']['date_format']
     break_date = datetime.strptime(config['break_date'][f'bank_{bank}'], date_format)
@@ -187,6 +211,7 @@ def create_revenue_features(config, bank):
     # filter by break date
     transaction_df[trans_cols['tran_date']] = pd.to_datetime(transaction_df[trans_cols['tran_date']], format=date_format)
     transaction_df = transaction_df[transaction_df[trans_cols['tran_date']] <= break_date]
+    # transaction_df = transaction_df[transaction_df[trans_cols['mcc']].isin([5411])]
 
     group = transaction_df.groupby(trans_cols['merchant_id'])
 
@@ -204,11 +229,14 @@ def create_revenue_features(config, bank):
     rev.to_csv(output_fname)
 
 
-def generate_labels(config, bank):
+def generate_labels(config, bank, fname_prefix):
     '''
     generate merchant well-being labels based on revenu
     '''
-    output = join('labels', f'labels_{bank}.csv')
+    fname = f'labels_{bank}.csv'
+    if fname_prefix:
+        fname = f'{fname_prefix}_{fname}'
+    output = join('labels', fname)
 
     if exists(output):
         print(f'{output} already exists')
@@ -221,55 +249,80 @@ def generate_labels(config, bank):
     date_format = config['break_date']['date_format']
     break_date = datetime.strptime(config['break_date'][f'bank_{bank}'], date_format)
 
-    df = pd.read_csv(join('data', 'filtered_data', f'agg_bank_{bank}_trans.csv'), index_col=[0, 1], header=[0, 1])
+    agg_trans_fname = f'agg_bank_{bank}_trans.csv'
+    if fname_prefix:
+        agg_trans_fname = f'{fname_prefix}_{agg_trans_fname}'
+    df = pd.read_csv(join('data', 'filtered_data', agg_trans_fname), index_col=[0, 1, 2], header=[0, 1])
     
     # split transaction summaries into two halves
-    df = df[trans_cols['tran_amount']].reset_index(level=1)
-    df[trans_cols['tran_date']] = pd.to_datetime(df[trans_cols['tran_date']], format='%d-%m-%Y')
+    df = df[trans_cols['tran_amount']].reset_index(level=2)
+    df[trans_cols['tran_date']] = pd.to_datetime(df[trans_cols['tran_date']], format=date_format)
+
     fh = df[df[trans_cols['tran_date']] <= break_date]  # first half
     sh = df[df[trans_cols['tran_date']] > break_date]   # second half
 
+    # merchant id to mcc 
+    mid2mcc = dict(df.index.drop_duplicates())
+
     # get avg monthly revenues
-    avg_fh = fh.groupby([fh.index, fh[trans_cols['tran_date']].dt.month])['sum'] \
-                .sum().groupby(level=0).mean()
-    avg_sh = sh.groupby([sh.index, sh[trans_cols['tran_date']].dt.month])['sum'] \
+    avg_fh = fh.groupby([fh.index.get_level_values(0), fh[trans_cols['tran_date']].dt.month])['sum'] \
+            .sum().groupby(level=0).mean()
+    avg_sh = sh.groupby([sh.index.get_level_values(0), sh[trans_cols['tran_date']].dt.month])['sum'] \
                 .sum().groupby(level=0).mean()
 
     assert set(avg_fh.index) == set(avg_sh.index), 'merchant id mismatch in labels'
 
-    # daily_revenues = df[trans_cols['tran_amount']]['sum'].unstack(1)
-    # daily_revenues.columns = pd.to_datetime(daily_revenues.columns, format=date_format)
-    # first_half = daily_revenues.loc[:, daily_revenues.columns <= break_date].sum(axis=1)
-    # second_half = daily_revenues.loc[:, daily_revenues.columns > break_date].sum(axis=1)
-
-    # revenue_change = ((second_half - first_half) / first_half).rename('label')
-    # median_change = revenue_change.median()
-
     revenue_change = ((avg_sh.loc[avg_fh.index] - avg_fh) / avg_fh).rename('label')
-    median_change = revenue_change.median()
+    #median_change = revenue_change.median()
+    mcc_median_change = revenue_change.groupby(lambda x: mid2mcc[x]).median()
 
-    revenue_change.loc[revenue_change >= median_change] = 1
-    revenue_change.loc[revenue_change < median_change] = 0
+    gt_median = [revenue_change.loc[ind] >= mcc_median_change[mid2mcc[ind]] for ind in revenue_change.index]
+    ls_median = [revenue_change.loc[ind] < mcc_median_change[mid2mcc[ind]] for ind in revenue_change.index]
+    
+    revenue_change.loc[gt_median] = 1
+    revenue_change.loc[ls_median] = 0
 
     logger.debug('bank {}, labels, # of rows: {}'.format(bank, revenue_change.shape[0]))
     logger.debug('bank {}, nan_values: {}'.format(bank, revenue_change.isna().sum()))
+    logger.debug('bank {}, label distribution: {}'.format(bank, revenue_change.value_counts(normalize=True)))
     revenue_change.to_csv(output)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Create revenue/demographic/network features and well-being labels')
 
-    parser.add_argument('-B', '--bank',
-                        type=str,
-                        required=True,
-                        help='bank name ("x", "y" or custom)')
+    parser.add_argument(
+        '-B', 
+        '--bank',
+        type=str,
+        required=True,
+        help='bank name ("x", "y" or custom)'
+    )
+
+    parser.add_argument(
+        '-P',
+        '--prefix',
+        type=str,
+        required=False,
+        help='output file name prefix'
+    )
+
+    parser.add_argument(
+        '-W',
+        '--weight',
+        type=str,
+        required=False,
+        help='weighted network features'
+    )
 
     args = parser.parse_args()
     bank = args.bank.lower()
+    fname_prefix = args.prefix
+    weight = args.weight
 
     with open(join('config.yaml')) as f:
         config = yaml.safe_load(f)
 
-    generate_labels(config, bank)
-    create_demographics(config, bank)
-    create_network(config, bank, weights='weight')
-    create_revenue_features(config, bank)
+    generate_labels(config, bank, fname_prefix)
+    create_demographics(config, bank, fname_prefix)
+    create_network(config, bank, fname_prefix, weights=weight)
+    create_revenue_features(config, bank, fname_prefix)

@@ -12,7 +12,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-ch = logging.FileHandler('.netlogfile')
+ch = logging.FileHandler('.netlogfile', 'w')
 ch.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s ~~ %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 ch.setFormatter(formatter)
@@ -35,7 +35,7 @@ def const_trans_net(config, bank, overwrite=False):
     min_customer_num = config['network_conf']['min_customer_num']
     trans_cols = config['tran_cols'][f'bank_{bank}']
 
-    #trans_df = pd.read_csv(join('data', f'bank_{bank}_transactions.csv'), dtype={trans_cols['merchant_id']: int})
+    # trans_df = pd.read_csv(join('data', f'bank_{bank}_transactions.csv'), dtype={trans_cols['merchant_id']: int})
     trans_df = pd.read_csv(join('data', 'filtered_data', f'filtered_bank_{bank}_trans.csv'), dtype={trans_cols['merchant_id']: int})
 
     date_format = config['break_date']['date_format']
@@ -92,8 +92,6 @@ def const_trans_net(config, bank, overwrite=False):
     g.es['weight'] = weights
 
     g.write_pickle(output_file)
-
-    print('network created')
 
     num_merchants = len(node_list)
     unk_merchants = len([n for n in mcc_list if n == 'unk'])

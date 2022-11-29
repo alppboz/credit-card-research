@@ -7,24 +7,30 @@ import geopandas as gpd
 import logging
 import os
 
+logfname = '.filterlogfile'
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-ch = logging.FileHandler('.filterlogfile')
+ch = logging.FileHandler(logfname, mode='w')
 ch.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s ~~ %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
 
-def filter_trans_records(config, bank):
+def filter_trans_records(config, bank, fname_prefix):
     '''
     filter credit transactions for the given bank
     '''
-    output_fname = join('data', 'filtered_data', config['trans_file_names'][f'bank_{bank}'])
+    fname = config['trans_file_names'][f'bank_{bank}']
+    if fname_prefix:
+        fname = '{}_{}'.format(fname_prefix, fname)
+
+    output_fname = join('data', 'filtered_data', fname)
 
     print(f'filtering transactions for bank: {bank}')
 
-    df = pd.read_csv(join('data', f'bank_{bank}_transactions.csv'))
+    #df = pd.read_csv(join('data', f'bank_{bank}_transactions.csv'))
+    df = pd.read_csv(join('data', f'bank_{bank}_transactions_customer_filters.csv'))
 
     cols = config['tran_cols'][f'bank_{bank}']
     filters = config['trans_filter'][f'bank_{bank}']
@@ -93,10 +99,12 @@ def filter_trans_records(config, bank):
     print('obtaining aggregate transaction summaries')
 
     # record aggregated summaries
-    agg_df = df.groupby([cols['merchant_id'], cols['tran_date']]).agg({cols['customer_id']: ['count', 'nunique'], cols['tran_amount']: ['sum', 'mean']})
-    agg_df.to_csv(join('data', 'filtered_data', config['trans_file_names']['agg'][f'bank_{bank}']), index=True)
+    agg_df = df.groupby([cols['merchant_id'], cols['mcc'], cols['tran_date']]).agg({cols['customer_id']: ['count', 'nunique'], cols['tran_amount']: ['sum', 'mean']})
 
-    print('done')
+    agg_fname = config['trans_file_names']['agg'][f'bank_{bank}']
+    if fname_prefix:
+        agg_fname = '{}_{}'.format(fname_prefix, agg_fname)
+    agg_df.to_csv(join('data', 'filtered_data', agg_fname), index=True)
 
 
 def assign_customer_district_ids(config, bank):
@@ -130,25 +138,48 @@ def assign_customer_district_ids(config, bank):
     combined_districts = assing_district('work', home_districts)
     
     result = combined_districts.drop('geometry', axis=1)
-    logger.debug('bank {}, customer districts nan values: {}'.format(bank, result[['home_district_id', 'work_district_id']].isna().sum()))
+    logger.debug('bank {}, customer districts nan value percentages: {}'.format(bank, result[['home_district_id', 'work_district_id']].isna().sum() / result.shape[0]))
     result.to_csv(output_fname, index=False)
-
-    print('assignment done')
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Filtering credit card transactions for the given bank')
 
-    parser.add_argument('-B', '--bank',
-                        type=str,
-                        required=True,
-                        help='bank name ("x", "y" or custom)')
+    parser.add_argument(
+        '-B', 
+        '--bank',
+        type=str,
+        required=True,
+        help='bank name ("x", "y" or custom)'
+    )
+
+    parser.add_argument(
+        '-P',
+        '--prefix',
+        type=str,
+        required=False,
+        help='output file name prefix'
+    )
+
+    parser.add_argument(
+        '-M',
+        '--mcc',
+        type=int,
+        required=False,
+        nargs='*',
+        help='mcc list to be considered'
+    )
 
     args = parser.parse_args()
     bank = args.bank.lower()
+    fname_prefix = args.prefix
+    mcc_list = args.mcc
 
     with open(join('config.yaml')) as f:
         config = yaml.safe_load(f)
 
-    filter_trans_records(config, bank)
+    if mcc_list:
+        config['trans_filter'][f'bank_{bank}']['mcc_list'] = mcc_list
+
+    filter_trans_records(config, bank, fname_prefix)
     assign_customer_district_ids(config, bank)
